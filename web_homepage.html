@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>QuickMart - Instant Grocery Delivery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2bee6c",
+                        "primary-hover": "#25d05f",
+                        "background-light": "#f8fcf9",
+                        "background-dark": "#102216",
+                        "card-light": "#ffffff",
+                        "card-dark": "#1a3322",
+                        "text-light": "#0d1b12",
+                        "text-dark": "#e7f3eb",
+                        "subtext-light": "#4c9a66",
+                        "subtext-dark": "#8fc7a6",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .cart-notification {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark antialiased overflow-x-hidden min-h-screen flex flex-col">
+    
+    <!-- Cart Notification -->
+    <div id="cartNotification" class="hidden fixed top-20 right-4 bg-primary text-black px-6 py-3 rounded-lg shadow-lg z-50 cart-notification">
+        <span id="notificationText">Item added to cart!</span>
+    </div>
+
+    <!-- Sticky Header -->
+    <header class="sticky top-0 z-50 w-full bg-card-light dark:bg-card-dark border-b border-[#e7f3eb] dark:border-[#2a4a35] shadow-sm">
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex items-center justify-between gap-8">
+                <!-- Logo & Location -->
+                <div class="flex items-center gap-6 min-w-fit">
+                    <a class="flex items-center gap-2 group" href="#">
+                        <div class="w-8 h-8 flex items-center justify-center bg-primary rounded-lg text-black">
+                            <span class="material-symbols-outlined font-bold text-xl">bolt</span>
+                        </div>
+                        <h1 class="text-2xl font-extrabold tracking-tight text-text-light dark:text-text-dark">QuickMart</h1>
+                    </a>
+                    <div class="hidden lg:flex flex-col border-l border-gray-200 dark:border-gray-700 pl-6">
+                        <span class="text-xs font-bold text-text-light dark:text-text-dark">Delivery in 10 mins</span>
+                        <div class="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors" onclick="changeLocation()">
+                            <span class="text-sm text-subtext-light dark:text-subtext-dark truncate max-w-[150px]" id="locationText">Home - New York, USA</span>
+                            <span class="material-symbols-outlined text-sm">expand_more</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="flex-1 max-w-2xl w-full">
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="material-symbols-outlined text-subtext-light dark:text-subtext-dark">search</span>
+                        </div>
+                        <input id="searchInput" class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg leading-5 bg-background-light dark:bg-background-dark placeholder-subtext-light dark:placeholder-subtext-dark focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all shadow-sm" placeholder="Search for 'milk', 'chips', 'bread'..." type="text" onkeyup="searchProducts()"/>
+                    </div>
+                </div>
+
+                <!-- Right Actions -->
+                <div class="flex items-center gap-3 min-w-fit">
+                    <button onclick="toggleDarkMode()" class="hidden md:flex items-center justify-center h-10 w-10 text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-[#2a4a35] rounded-lg transition-colors">
+                        <span class="material-symbols-outlined dark:hidden">dark_mode</span>
+                        <span class="material-symbols-outlined hidden dark:inline">light_mode</span>
+                    </button>
+                    <button class="hidden md:flex items-center justify-center h-10 px-4 text-text-light dark:text-text-dark font-medium hover:bg-background-light dark:hover:bg-[#2a4a35] rounded-lg transition-colors">
+                        Login
+                    </button>
+                    <button onclick="toggleCart()" class="flex items-center justify-center h-12 bg-primary hover:bg-primary-hover text-black font-bold rounded-lg px-4 gap-2 transition-transform active:scale-95 shadow-md shadow-primary/20">
+                        <span class="material-symbols-outlined text-[20px]">shopping_cart</span>
+                        <div class="flex flex-col items-start leading-none">
+                            <span class="text-xs font-medium">My Cart</span>
+                            <span class="text-sm" id="cartCount">0 items</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        <!-- Hero Carousel Section -->
+        <section class="w-full">
+            <div class="relative w-full h-64 md:h-80 lg:h-96 rounded-2xl overflow-hidden shadow-sm">
+                <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBzos2035awyMCWdc8ArIlF-e_dOvi3DJTPO4ecdchBHxnLp-ck0l-8u9KbzVHsXJSOiiCJBNZyXiciKH42aUzMQFfdALwQIyJErbb31ICP5_ZJPfRrmdhDRGUzvwr-ZM6106ksgFf3npdrv8x8pO7n4bWpEzs-J6SRgf8zBwKFIFNrGQMrWCoj4-xAAP_idIKYj6VkOauU39C1PEctAgoMrkjDMZM_iFMF6LF-ME9r0DtquHTJX5ExtHCr6Jn3TKsTkNF8NNBDC04');">
+                    <div class="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent"></div>
+                </div>
+                <div class="relative z-10 h-full flex flex-col justify-center px-8 md:px-16 max-w-2xl">
+                    <span class="inline-block px-3 py-1 mb-4 text-xs font-bold tracking-wider text-black uppercase bg-primary rounded-full w-fit">Free Delivery</span>
+                    <h2 class="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-4">
+                        Groceries delivered in <br/> <span class="text-primary">10 minutes</span>
+                    </h2>
+                    <p class="text-lg text-gray-200 mb-8 font-medium">Fresh produce, dairy, and daily essentials at your doorstep.</p>
+                    <button class="bg-white text-black hover:bg-gray-100 font-bold py-3 px-8 rounded-lg shadow-lg transition-colors w-fit flex items-center gap-2">
+                        Shop Now 
+                        <span class="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Promotional Banners Grid -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-5 flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow border border-blue-100 dark:border-blue-800/30">
+                <div>
+                    <p class="text-blue-600 dark:text-blue-400 font-bold text-sm mb-1">Mega Sale</p>
+                    <h3 class="text-lg font-bold text-text-light dark:text-text-dark leading-tight">Up to 50% OFF<br/>on Hygiene</h3>
+                </div>
+                <div class="w-20 h-20 bg-center bg-contain bg-no-repeat" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBQbOUfmbhm1bG5mwv6nSdjNL-aB6sLC7g0loEU3SqutX1vCmEK_lCh2J-RGVQlNdY5LK00OUxJqzd-ElbwkjwBMjEeUljKkizWjdg_8521T2LPJDil36jaQrpICU76r1KWDcwJnaiboH87QjOpo0NIyZLbZkSrJ4AKknDVHKwg0G9369ZDAGdW_Lm41kKYEyzMw1eNDPPv65DmcLJRNR00TR4vIsFOfWlrb7UePliw6I3RRLx6Pdtoy0YncoAjIQCZFthdzcYTXaI');"></div>
+            </div>
+            <div class="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-5 flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow border border-orange-100 dark:border-orange-800/30">
+                <div>
+                    <p class="text-orange-600 dark:text-orange-400 font-bold text-sm mb-1">Daily Staples</p>
+                    <h3 class="text-lg font-bold text-text-light dark:text-text-dark leading-tight">Farm Fresh<br/>Vegetables</h3>
+                </div>
+                <div class="w-20 h-20 bg-center bg-contain bg-no-repeat" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA6naFhYC7KDiJyiiULfj68CIpvs3sc_Dcxd54SldPy0Jeyr2zOye4FKJhVhwd0T48VumBWPU8v-AqdleZJBfuV56KA0ytyIj9ZSur_mw9o9RxBT60AV214DRndHPaImiskd7NM9Tr1X3n6jGU-rWEFZ_itUo1d7SSnDoXw0cwvANLdPrT4N8e5mJWDYVLJcsfrflK66HxMsSZlYTg-xZZAI-RSjdJwCaR7sxVVyuoKhQ56NdGdks_uBCxO9Yip4QwcVl40eAcnmjw');"></div>
+            </div>
+            <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-5 flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow border border-purple-100 dark:border-purple-800/30">
+                <div>
+                    <p class="text-purple-600 dark:text-purple-400 font-bold text-sm mb-1">Snack Time</p>
+                    <h3 class="text-lg font-bold text-text-light dark:text-text-dark leading-tight">Munchies &<br/>Cold Drinks</h3>
+                </div>
+                <div class="w-20 h-20 bg-center bg-contain bg-no-repeat" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC_o1SEPpDk5lADpBSEh-lURr7fD8-qFBE0RyKypBZUKTxt4EDt21eXPFwLSaut5JwTrqg4dm493D5zeK16BnuTHa_VnvnbyIeyB3EGw77Hf64rqufXb9NXRigPUsnjk4s08O0ZrXmd26rod3jabxl8vXZxwLDZAxrgHdeyyWrJ5TwUMubEevqoieUi0eM8EaoksXDUFAKdhqVO20xGqt18aR_YuqA55HyCF-jQvvF6m00o3iPi1nb9K5Xo0_9owYTagsqCfjGFtXg');"></div>
+            </div>
+        </section>
+
+        <!-- Shop By Category -->
+        <section>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Shop by Category</h2>
+                <a class="text-primary hover:text-primary-hover font-semibold text-sm flex items-center gap-1" href="#">
+                    See All <span class="material-symbols-outlined text-sm">chevron_right</span>
+                </a>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div class="group cursor-pointer flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-card-light dark:hover:bg-card-dark hover:shadow-sm transition-all">
+                    <div class="w-full aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
+                        <div class="w-full h-full bg-center bg-cover transition-transform group-hover:scale-105" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDlrUh0oOm2Rrd5otexszB0REUvhsMRHaYXNV9i9NOyIrWPuGcbwd-GeSOLr3AFkj5qpN8ZYA5twoOGunHK7L9zKTrfrgVELNJF2cxHBPvdo2sMuRKlyvFbD2FsN8HBKS1_f_KM6nieI_O5J7aCaS1pjM9oHitUZSlVuNKE61goLd2GlWZAjOXVYZBhloKYMNya5XTNSDvidAZMTmFE_OquQrTPN5yr-azSA-NvH1J6DX0yNTwYqBWwGjY5fpEEDQrm34lTg5zmTzs');"></div>
+                    </div>
+                    <span class="text-center font-semibold text-sm text-text-light dark:text-text-dark">Dairy & Bread</span>
+                </div>
+                <div class="group cursor-pointer flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-card-light dark:hover:bg-card-dark hover:shadow-sm transition-all">
+                    <div class="w-full aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
+                        <div class="w-full h-full bg-center bg-cover transition-transform group-hover:scale-105" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDIx7mVyZwfOcdm7T175Q4VC0nyyO_haohHLscij6rX_O-NjKx0g7FssSM9lAD-_a_V-_BAHXeHzVo59Va_LyVPwi8F60E81rLUygrc6AQ-jKBqYYPW3BLq_ClkAXhYZru3qKZi3H1TLZLSZVOzqDyY5-vo-JPPxsxxV0ABGKskcNVFCg01Fnlfo2C1RaO4MZu62dqU7QzY5-LdquQfAx9DXZB29SGsKj2eAt1e8Wmje2z_09OFg3M0gnhDa7TX2QEfUBNP9QkV3Ww');"></div>
+                    </div>
+                    <span class="text-center font-semibold text-sm text-text-light dark:text-text-dark">Fruits & Veg</span>
+                </div>
+                <div class="group cursor-pointer flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-card-light dark:hover:bg-card-dark hover:shadow-sm transition-all">
+                    <div class="w-full aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
+                        <div class="w-full h-full bg-center bg-cover transition-transform group-hover:scale-105" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCImDnZPE8qSwhDXpTBZ9By6GtkioO8aBIIrFTwp9eLqfzRmT95-N49DMsLVcqEOd9mXOFJfgh0eaDPnZRUa__NymmcTSO4otlXOIbpbZAcf3c4GeeqKsR7sLDTB7mNBn61f3Hj7l3_3TpLSGgSTtJ4fvk98QWKCiCqxVPVPnxk55mKWEsw-8-OqnYmyVpWb9b9CccdKZfYDVsfTmi6jnBJQu1F8_TTRVvoUVBDvvrmi6nXCsDwqNmgBIYwe5WKU9VEKdhYVOTk7qY');"></div>
+                    </div>
+                    <span class="text-center font-semibold text-sm text-text-light dark:text-text-dark">Cold Drinks</span>
+                </div>
+                <div class="group cursor-pointer flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-card-light dark:hover:bg-card-dark hover:shadow-sm transition-all">
+                    <div class="w-full aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
+                        <div class="w-full h-full bg-center bg-cover transition-transform group-hover:scale-105" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDZgGsLr8fSkv3249IFrbXypT2cd_oY76wqZ-WTZ504Z_RG9lfw0DwtT2BwMsRok69OgupGPmN7jJFSz6w_w7hNr5nCRryc4c12YZuP4Gq6VXR5aGVBrfN5fCOYyf3bJii5Z1OIw-MKAGiRtKIQ7FSznjwQN1FFOFEZ3hnC0gWJpMYPW7ZTpaTYP_adHSo135Nkb5wswcYmEFtgyQNWlInVbBI5WQqFAXCab5t9Lb3da_sO9FIlcRThgDdUJnbgTG5ay9J6U8e4otA');"></div>
+                    </div>
+                    <span class="text-center font-semibold text-sm text-text-light dark:text-text-dark">Munchies</span>
+                </div>
+                <div class="group cursor-pointer flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-card-light dark:hover:bg-card-dark hover:shadow-sm transition-all">
+                    <div class="w-full aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
+                        <div class="w-full h-full bg-center bg-cover transition-transform group-hover:scale-105" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBz9rDHoHw6cyK2CCFvbgRFVIU4FJ5t15pgxFy8C6jS9f5-pz68-L3YS2BtZDvaaI4rUX7tJ18OREsJa9DjmHcO-mfz2ff7FSPZRhSzbI_-RRmpF7Uczlr08mvAZB5AAe1HTcmVPLKTkfHZthZ5PWhmYLkiPmvcKLTi1P4Ttc6kbYFqsOiW2UmC6SxcYbtWA96aIM4diUo96WKoi-2InugpyshFh-o2kGE6ZrBDixoeorQMZ1yjdmE5Q8GEF3N9S9tmZgV2rlPRNco');"></div>
+                    </div>
+                    <span class="text-center font-semibold text-sm text-text-light dark:text-text-dark">Instant Food</span>
+                </div>
+                <div class="group cursor-pointer flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-card-light dark:hover:bg-card-dark hover:shadow-sm transition-all">
+                    <div class="w-full aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
+                        <div class="w-full h-full bg-center bg-cover transition-transform group-hover:scale-105" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCsY2x4bOLMRlmGvWRhT3DHd6lwXS0m530mr2sU5QO3BJqHN6xLoxeusJvZpTZmBjKVttFfeLSQPrYFSTd6thYT7UZe8EJ3-sCp2Khy631gV2pDphFdAmiJqDI4Q_vTgXGThjRi1OfQ9gdLgfXknHU1ffJ-jq-GdwNuKJxZIg8fLGTw-qmDhlD4oAaQefgFaIalBbhXixWgqi5ojZeOpnK6paIUQ24zVK8v86wy95T6h1IGuTi9FJZDV612uY0JsEFaC7M0UwIiZc0');"></div>
+                    </div>
+                    <span class="text-center font-semibold text-sm text-text-light dark:text-text-dark">Tea & Coffee</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Featured Products: Dairy, Breads & Eggs -->
+        <section id="productsSection">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Dairy, Breads & Eggs</h2>
+                <a class="text-primary hover:text-primary-hover font-semibold text-sm flex items-center gap-1" href="#">
+                    See All <span class="material-symbols-outlined text-sm">chevron_right</span>
+                </a>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="productGrid">
+                <!-- Products will be rendered by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Large Promotional Banner -->
+        <section class="w-full rounded-2xl overflow-hidden shadow-sm mt-4">
+            <div class="flex flex-col md:flex-row bg-[#e8f1f7] dark:bg-[#1a2c38]">
+                <div class="flex-1 p-8 flex flex-col justify-center">
+                    <span class="text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider text-xs mb-2">Summer Essentials</span>
+                    <h2 class="text-3xl font-extrabold text-text-light dark:text-text-dark mb-4">Beat the Heat with<br/>Ice Creams</h2>
+                    <p class="text-subtext-light dark:text-subtext-dark mb-6 max-w-md">Get up to 30% off on family packs and cones. Delivered frozen in 10 minutes.</p>
+                    <button class="bg-text-light dark:bg-white text-white dark:text-black hover:opacity-90 font-bold py-2.5 px-6 rounded-lg transition-colors w-fit">
+                        Shop Ice Creams
+                    </button>
+                </div>
+                <div class="flex-1 relative h-64 md:h-auto min-h-[250px]">
+                    <div class="absolute inset-0 bg-contain bg-right bg-no-repeat" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB-dmwqVYGUF9rNGhXWjUmJ72pkYmoZQVElLnn0Z1frzr0APGHkI7qt794CUlS5z4Juhay4cANi9esChrOZ3gnDB_nOMQMZNLLZqggtDL0g76alwEFKWN9pPn6oG2jdwNyee-C90WVaHGx3RkAgIcPTDeleaqcVOEalt1lg-Kq_QWJmj9IXO2cn1Wj3Emzc2dIukTw5MeVLRPC1N8Jz-Dkm0wVKH1oNwwovoybWiwVNRiWgr1US8oRI3GO02eKXmkfFbFpHt8Q_iv0');"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Popular Near You -->
+        <section id="popularSection">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Popular Near You</h2>
+                <a class="text-primary hover:text-primary-hover font-semibold text-sm flex items-center gap-1" href="#">
+                    See All <span class="material-symbols-outlined text-sm">chevron_right</span>
+                </a>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="popularGrid">
+                <!-- Popular products will be rendered by JavaScript -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-card-light dark:bg-[#1a2e23] border-t border-gray-200 dark:border-gray-800 mt-12 py-10">
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="flex flex-col gap-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 flex items-center justify-center bg-primary rounded text-black">
+                            <span class="material-symbols-outlined font-bold text-sm">bolt</span>
+                        </div>
+                        <h2 class="text-xl font-bold text-text-light dark:text-text-dark">QuickMart</h2>
+                    </div>
+                    <p class="text-sm text-subtext-light dark:text-subtext-dark">Groceries delivered in 10 minutes. The fastest delivery app in town.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-text-light dark:text-text-dark mb-4">Company</h3>
+                    <ul class="space-y-2 text-sm text-subtext-light dark:text-subtext-dark">
+                        <li><a class="hover:text-primary transition-colors" href="#">About Us</a></li>
+                        <li><a class="hover:text-primary transition-colors" href="#">Careers</a></li>
+                        <li><a class="hover:text-primary transition-colors" href="#">Blog</a></li>
+                        <li><a class="hover:text-primary transition-colors" href="#">Team</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-text-light dark:text-text-dark mb-4">Help</h3>
+                    <ul class="space-y-2 text-sm text-subtext-light dark:text-subtext-dark">
+                        <li><a class="hover:text-primary transition-colors" href="#">FAQs</a></li>
+                        <li><a class="hover:text-primary transition-colors" href="#">Contact Us</a></li>
+                        <li><a class="hover:text-primary transition-colors" href="#">Terms & Conditions</a></li>
+                        <li><a class="hover:text-primary transition-colors" href="#">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-text-light dark:text-text-dark mb-4">Download App</h3>
+                    <div class="flex flex-col gap-3">
+                        <button class="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-3 w-fit hover:bg-gray-800 transition-colors">
+                            <span class="material-symbols-outlined text-2xl">ios</span>
+                            <div class="text-left leading-none">
+                                <div class="text-[10px] uppercase">Download on the</div>
+                                <div class="text-sm font-bold">App Store</div>
+                            </div>
+                        </button>
+                        <button class="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-3 w-fit hover:bg-gray-800 transition-colors">
+                            <span class="material-symbols-outlined text-2xl">android</span>
+                            <div class="text-left leading-none">
+                                <div class="text-[10px] uppercase">Get it on</div>
+                                <div class="text-sm font-bold">Google Play</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-10 pt-6 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-subtext-light dark:text-subtext-dark">
+                © 2024 QuickMart Technologies. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Cart state
+        let cart = {};
+        let totalItems = 0;
+
+        // Products data
+        const dairyProducts = [
+            { id: 1, name: 'Fresh Farm Milk Full Cream', size: '1 L', price: 2.12, oldPrice: 2.50, discount: '15% OFF', time: '10 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBD8pm_MqFBOWX-7sVnTX4BXU5vKRs3WcpuZ8v_uenob7UN5QjtbXVuuzo4VZo5_ycOG4suFB_wKFdEVuVa1OohgdBtkKSEiKL6DJJOdJl7E0LPfsk60I7pQfyNJ48O4gQiyO16M3rwKmPgRKuR_xWxVRwma4AsOQR5bnsiSZqHV8N1yu-Rb022Rp6ywdzAJd1I0-f2ai6h7AkKhhzLfYcLk4Raf9xY2Qf1tFZqlGUsAYMzHrtRQDRQofyPW778p6PdFJvzliCY9NU' },
+            { id: 2, name: 'Whole Wheat Brown Bread', size: '400 g', price: 1.50, time: '12 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCpo-V2YH1r2N09r4jRGvNwAYWzZFxn4xc00xHqQSz4IXLOrFc7CsGAd7EWChiQIsi89R07yWeoeAElBRGk70QC0TIfOjrHWF2BMeeveFhaRS1bmilbIZ1WKymUcsCytoIIrtR8SJvSihWA0GWHTiNXcULorArXG5dPmDh0fh8viEnx6d-h9wPxrWhHOJ1rhICLeSd2D3AKU1WXZDmjNviYNBWlMf9MA9WrQC0GDZ4OQlrsExYGuwGIEsqRVdqovrS1T4RM9qGPaHI' },
+            { id: 3, name: 'Farm Fresh Brown Eggs', size: '6 pcs', price: 2.80, oldPrice: 3.00, badge: 'HOT', time: '8 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDq1i76uk-9bPrHyE587xH6B4OhWI-ZxAaKhZnwyDM2bkBaqp4RRwBLqrICxgCVes0VeW6HMfC_b9x3u9L1QTdN50nzJmS0ma4Hls_Vcf5ujcKMzdpGtt9W-9M-0N9KSPmNlJZNLYTwZvHsfdSSuAGpnxD9_2T5wlvD4XPd0xex26TcKn0M3RAO8RhDmzEzOMozyzseddO983-OWhcljW0QvTPm75f-fQMeYrvBR_7tVJpk0JuVNGTHdHghAQksUlCVK01OqqCMjTQ' },
+            { id: 4, name: 'Cheddar Cheese Block', size: '200 g', price: 4.50, time: '14 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDn3ux2eFuSKuN4xdD4uZ--mh4vfdJ6LsoCqXoNWOLU24Y5XkbymIH2D92yF1PIGFddW5zQCk853Zr-qNzdeNpYjo4o5k3V3wwTxhWFdmFo1X6nUaN5nxDb-MVd4cT9gCLWtSjLA3cqQMF872y3n4JmoYZPpVekvnl76mM_YbllfFj3nHMQGvRB7vivZQhGuGHJPYPHW66HH0cuKeaQKNE9c1sPDCCF2OLIVimFY0c71kGylgVD2eTm7EW8JBiMpNZIrnSr9hKTb6c', inCart: 1 },
+            { id: 5, name: 'Greek Yogurt Plain', size: '120 g', price: 1.20, time: '9 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAAUC0rO2jJdH0Yis9rfPs8H5fWG8IW09JcNmJ0Y3u-7PS2qqjntMV6zNnWVOHJ2NOQtdURHIc5khoiZ-XMvpvniuquHDAa1wA57EAOErkmuxs0hoozI96LjatVmLANi0fF1B8atpfxjus3bPi7zTyitTGZtbwOQvVzUkSrKmXGL4W3x6Fu_e1oXMb4QhGeiLWB1qqBQBx96VcHToG9qsWC7wYFIg4LKkBR3RSl2i_3oCfxb3Q9ZWTTBxhbOe6Sx6go_ZrxNliwBeY' }
+        ];
+
+        const popularProducts = [
+            { id: 6, name: 'Coca-Cola Original Taste', size: '750 ml', price: 1.10, time: '8 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAI7jsNEvVXkkd0G-JNp0j8cW29rxHsSjcvChtTkt749gPLAyFekfV1lcBQTXcUYUXIdvVlPwPxk861GzKAwGKN2MCZLS0OJ84G-RiS2VuNW4lyf57eW_KQQF5Zjd0I6kzXv2tM4hVAc6xvg6AhyyWqednjxL5QWwCp-nxrFKdJL_8luIGfST4qCtMrYohxQovixu5kBa_0ghJWjQLtQrcO_o0o-Jk9iO6VECnTYLaXB6rnJpKI9QwyCeFeBFbIiZqrjqw9iMNG7Yk' },
+            { id: 7, name: 'Classic Salted Chips', size: '50 g', price: 0.50, time: '10 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCT-vflkpyJDtzgtfRzI1GWWFriDhV4yTD1S3SkwHk_ByUFg4Q6ecRAJPAllZ5a5eueBBibsA9tzPlV2VBw-JgF8sMUzFhjU_ymDwjyuXpWuQ69v8QuNH-nQ-MIz9WZPN-7VHwkw7uLsT17Md05vpIoKIwUIHKqLG0Jd_t617B3amh5YzQP_19cYB857acTu0djzrgirMbWxdS9T41gjCBtTkd6Ql9Gflcp2OuKFx8EUuvbxg0HDU66sC5wvtrf-4l2UbXQGm_pwzU' },
+            { id: 8, name: 'Choco Chip Cookies', size: '100 g', price: 1.80, time: '15 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD874NmL1CG5PpDq0M_rLM9_LSKjbe9zDyyzvAwC3ZTfT6jjXvjwOdRsxN98Chyc9BtS5nlrN3-8qHgMy50de-zR0ilSPf9dT5jTN3lpN5sBjnMDGZU2UkmW00jVG1L1bwcDpFhFz24QVHlMSRlHvIWm-rgokT_jD5ih1mSjOMAlQ68lnqbf4k0Ftw1ud2-6Z9TpCGzIrvQpr7P96cVOfGjp5awl14BpeaW2Y2WTH-eSxMg5J-BqRfVEH8ethaJLLMwwLMDjxgZnZg' },
+            { id: 9, name: 'Red Apples (Washington)', size: '4 pcs', price: 3.20, time: '12 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBkzbIlmF5oyrWx0OnzLzq_FJTqkYOvGg2135xAV4nq94jDi47a033k1e4Xc8gJlfidblgF7MTD2_E9Lpx3ZrJt3_PgjIpemXE-uRTi4uMn082NE3e0Rw4f2i9B2eW-WcfgPeLe2RG7fGhikYBCqql-ig2NwVuEpYypw411BNq108EMasBV5sYCuXg4JcJ7ca98W9JBqUZ78442wsFVu82vrmVuk3VYzfRyoO0or-X_4_VDu24Brj9eV3S6x2INFafKSmNZzA0Hmpo' },
+            { id: 10, name: 'Fresh Bananas Robusta', size: '500 g', price: 1.00, time: '10 mins', image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDbKUNoLxI2IjM2IdQ91ZDtsrT9GEyQ6kvC8bN3PsosV2LwF6jdIJ6BaQr2XEYQucDK4SpFFS9AatbomSwdE5gu0YzOpgZrNUwRaqUQEWHEFDXwxfKgRN3489YUfsP__yKQg4Y5C5-B3iW9WHOw-xsemB3PWGBhvND7AJU9ukhSJXrEtya6kaeBVCsfxvqi460LNVmwMeYcAnyh9dZswVpi9XfXnHoIioqRx1EQ9cEw9HOJL99NoH6iR9wxq2sPTeFMRhLtDgO4Czs' }
+        ];
+
+        // Initialize cart with one item already in it
+        cart[4] = 1;
+        totalItems = 1;
+
+        // Dark mode toggle
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.getElementById('cartNotification');
+            const notificationText = document.getElementById('notificationText');
+            notificationText.textContent = message;
+            notification.classList.remove('hidden');
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 2000);
+        }
+
+        // Update cart count
+        function updateCartCount() {
+            document.getElementById('cartCount').textContent = `${totalItems} item${totalItems !== 1 ? 's' : ''}`;
+        }
+
+        // Add to cart
+        function addToCart(productId, productName) {
+            if (!cart[productId]) {
+                cart[productId] = 1;
+                totalItems++;
+                updateCartCount();
+                renderProducts();
+                showNotification(`${productName} added to cart!`);
+            }
+        }
+
+        // Update quantity
+        function updateQuantity(productId, change) {
+            if (cart[productId]) {
+                cart[productId] += change;
+                if (cart[productId] <= 0) {
+                    delete cart[productId];
+                    totalItems--;
+                } else {
+                    totalItems += change;
+                }
+                updateCartCount();
+                renderProducts();
+            }
+        }
+
+        // Toggle cart (placeholder)
+        function toggleCart() {
+            alert(`Cart has ${totalItems} item${totalItems !== 1 ? 's' : ''}!\n\nTotal: ${calculateTotal().toFixed(2)}`);
+        }
+
+        // Calculate total
+        function calculateTotal() {
+            let total = 0;
+            [...dairyProducts, ...popularProducts].forEach(product => {
+                if (cart[product.id]) {
+                    total += product.price * cart[product.id];
+                }
+            });
+            return total;
+        }
+
+        // Change location (placeholder)
+        function changeLocation() {
+            const locations = ['Home - New York, USA', 'Work - Manhattan, USA', 'Other - Brooklyn, USA'];
+            const current = document.getElementById('locationText').textContent;
+            const currentIndex = locations.indexOf(current);
+            const nextIndex = (currentIndex + 1) % locations.length;
+            document.getElementById('locationText').textContent = locations[nextIndex];
+            showNotification(`Delivery location changed to ${locations[nextIndex]}`);
+        }
+
+        // Render product card
+        function renderProductCard(product) {
+            const inCart = cart[product.id] || 0;
+            
+            return `
+                <div class="bg-card-light dark:bg-card-dark border border-gray-100 dark:border-gray-800 rounded-xl p-3 flex flex-col gap-3 relative group hover:shadow-md transition-shadow product-card" data-name="${product.name.toLowerCase()}">
+                    ${product.discount ? `<div class="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm z-10">${product.discount}</div>` : ''}
+                    ${product.badge ? `<div class="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm z-10">${product.badge}</div>` : ''}
+                    <div class="w-full aspect-square bg-white dark:bg-gray-800 rounded-lg overflow-hidden relative flex items-center justify-center p-2">
+                        <div class="w-full h-full bg-contain bg-no-repeat bg-center" style="background-image: url('${product.image}');"></div>
+                    </div>
+                    <div class="flex flex-col flex-1">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <span class="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded font-medium">${product.time}</span>
+                        </div>
+                        <h3 class="font-semibold text-text-light dark:text-text-dark text-sm leading-tight mb-1 line-clamp-2">${product.name}</h3>
+                        <p class="text-xs text-subtext-light dark:text-subtext-dark mb-2">${product.size}</p>
+                        <div class="mt-auto flex items-center justify-between">
+                            <div class="flex flex-col">
+                                ${product.oldPrice ? `<span class="text-xs text-gray-400 line-through">${product.oldPrice.toFixed(2)}</span>` : ''}
+                                <span class="text-sm font-bold text-text-light dark:text-text-dark">${product.price.toFixed(2)}</span>
+                            </div>
+                            ${inCart > 0 ? `
+                                <div class="flex items-center rounded-lg bg-primary h-[34px]">
+                                    <button onclick="updateQuantity(${product.id}, -1)" class="px-2 text-black hover:bg-primary-hover rounded-l-lg transition-colors h-full flex items-center">-</button>
+                                    <span class="text-sm font-bold text-black px-1 min-w-[20px] text-center">${inCart}</span>
+                                    <button onclick="updateQuantity(${product.id}, 1)" class="px-2 text-black hover:bg-primary-hover rounded-r-lg transition-colors h-full flex items-center">+</button>
+                                </div>
+                            ` : `
+                                <button onclick="addToCart(${product.id}, '${product.name}')" class="bg-white dark:bg-transparent border border-primary text-primary font-bold text-sm px-4 py-1.5 rounded-lg hover:bg-primary hover:text-black transition-colors uppercase">
+                                    Add
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render all products
+        function renderProducts() {
+            document.getElementById('productGrid').innerHTML = dairyProducts.map(renderProductCard).join('');
+            document.getElementById('popularGrid').innerHTML = popularProducts.map(renderProductCard).join('');
+        }
+
+        // Search functionality
+        function searchProducts() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.product-card');
+            
+            if (!query) {
+                cards.forEach(card => card.style.display = '');
+                return;
+            }
+            
+            cards.forEach(card => {
+                const name = card.dataset.name;
+                card.style.display = name.includes(query) ? '' : 'none';
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            renderProducts();
+            updateCartCount();
+        });
+    </script>
+</body>
+</html>
